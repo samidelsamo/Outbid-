@@ -1,0 +1,628 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Auction Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Concept: festival poster. Three categories as tabs (Music, Art, Five). Music has genre chips (Rock, Rap US/UK/FR) and a Lineup/Playlist switch. Each game: two player cards, the current lot (one item revealed at a time), then both selections sorted by bid (highest on top). */
+:root {
+  --bg: #ECEDF3;
+  --surface: #FFFFFF;
+  --ink: #15131F;
+  --muted: #5E5C70;
+  --line: #C9CAD8;
+  --a: #C8175E;
+  --on-a: #FFFFFF;
+  --b: #00776A;
+  --on-b: #FFFFFF;
+  --accent: #2430FF;
+  --on-accent: #FFFFFF;
+  --danger: #B3261E;
+  --display: "Anton", "Impact", "Arial Narrow", sans-serif;
+  --body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12111B; --surface: #1C1B28; --ink: #F1EFFA; --muted: #A09DB6; --line: #36344A;
+    --a: #FF6B9C; --on-a: #1A0A12; --b: #3FE3C6; --on-b: #04201B;
+    --accent: #8A93FF; --on-accent: #0B0D3A; --danger: #FF8A80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12111B; --surface: #1C1B28; --ink: #F1EFFA; --muted: #A09DB6; --line: #36344A;
+  --a: #FF6B9C; --on-a: #1A0A12; --b: #3FE3C6; --on-b: #04201B;
+  --accent: #8A93FF; --on-accent: #0B0D3A; --danger: #FF8A80;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--body); font-size: 15px; line-height: 1.4;
+  padding-inline: 16px; padding-block: 20px 40px;
+}
+main { max-width: 560px; margin-inline: auto; display: flex; flex-direction: column; gap: 22px; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 4px 0 0; font-family: var(--display); font-weight: 400; font-size: clamp(54px, 17vw, 88px); line-height: .92; text-transform: uppercase; letter-spacing: .01em; text-wrap: balance; }
+h2 { margin: 0; font-family: var(--mono); font-weight: 500; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); border: 2px solid var(--ink); border-radius: 2px; }
+.tab { background: transparent; border: 0; padding: 12px; font-family: var(--display); font-size: 20px; letter-spacing: .06em; text-transform: uppercase; }
+.tab + .tab { border-left: 2px solid var(--ink); }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+
+.subnav { display: flex; flex-direction: column; gap: 8px; margin-top: -8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { background: transparent; border: 1.5px solid var(--line); border-radius: 2px; padding: 7px 13px; font-size: 14px; font-weight: 700; }
+.chip:hover { border-color: var(--ink); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1.5px solid var(--line); border-radius: 2px; }
+.seg button { background: transparent; border: 0; padding: 9px; font-size: 14px; font-weight: 700; }
+.seg button + button { border-left: 1.5px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+.panel { display: flex; flex-direction: column; gap: 22px; }
+
+.players { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pcard { min-width: 0; background: var(--surface); border: 2px solid var(--ink); border-radius: 2px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.pcard.p0 { --c: var(--a); --on: var(--on-a); }
+.pcard.p1 { --c: var(--b); --on: var(--on-b); }
+.pname { width: 100%; min-width: 0; background: transparent; border: 0; border-bottom: 2px dashed var(--c); border-radius: 0; padding: 2px 0 4px; font-weight: 700; font-size: 15px; }
+.pname:focus { outline: none; border-bottom-style: solid; }
+.pname::placeholder { color: var(--muted); font-weight: 400; }
+.rem { font-family: var(--display); font-size: 68px; line-height: 1; color: var(--c); font-variant-numeric: tabular-nums; }
+.sub { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: -4px; }
+.meter { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 4px; }
+.meter i { height: 8px; border: 1.5px solid var(--ink); background: transparent; }
+.meter i.on { background: var(--c); border-color: var(--c); }
+.facts { display: flex; justify-content: space-between; gap: 8px; font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.facts b { font-weight: 500; color: var(--ink); }
+.facts span { color: var(--muted); }
+
+.lot { background: var(--surface); border: 2px solid var(--ink); border-radius: 2px; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+.lothead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.lotno { font-family: var(--display); font-size: 30px; line-height: 1; text-transform: uppercase; }
+.opens { font-size: 14px; color: var(--muted); }
+.opens b { color: var(--ink); }
+.fl { display: block; margin-bottom: 6px; font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.stage { background: var(--bg); border: 2px solid var(--line); border-radius: 2px; padding: 14px 12px; }
+.artist { min-width: 0; font-family: var(--display); font-size: clamp(34px, 11vw, 52px); line-height: 1; text-transform: uppercase; overflow-wrap: anywhere; }
+.artist small { display: block; margin-top: 8px; font-family: var(--body); font-size: 15px; font-weight: 500; line-height: 1.2; text-transform: none; color: var(--muted); }
+.skips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.who { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.wbtn { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; background: transparent; border: 2px solid var(--line); border-radius: 2px; padding: 10px 12px; }
+.wbtn .wn { font-weight: 700; overflow-wrap: anywhere; }
+.wbtn .wm { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.wbtn[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: var(--on); }
+.wbtn[aria-pressed="true"] .wm { color: var(--on); opacity: .85; }
+.wbtn.p0 { --c: var(--a); --on: var(--on-a); }
+.wbtn.p1 { --c: var(--b); --on: var(--on-b); }
+.wbtn:disabled { opacity: .45; cursor: not-allowed; }
+.skipbtn { border-style: dashed; padding: 8px 12px; }
+.skipbtn .wn { font-size: 13px; }
+.skipbtn:hover:not(:disabled) { border-color: var(--c); border-style: solid; }
+input[type="number"] {
+  width: 100%; min-width: 0; background: var(--bg); border: 2px solid var(--line); border-radius: 2px;
+  padding: 6px 12px; font-size: 17px;
+}
+input[type="number"]:focus { border-color: var(--ink); outline: none; }
+.bidrow { display: grid; grid-template-columns: 52px 1fr 52px; gap: 8px; }
+.step { background: var(--bg); border: 2px solid var(--line); border-radius: 2px; font-size: 24px; line-height: 1; }
+.step:hover:not(:disabled) { border-color: var(--ink); }
+.bid { text-align: center; font-family: var(--display); font-size: 30px; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+.bid::-webkit-outer-spin-button, .bid::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.err { min-height: 1.3em; color: var(--danger); font-size: 14px; font-weight: 500; }
+.go { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 2px; padding: 14px; font-family: var(--display); font-size: 22px; letter-spacing: .06em; text-transform: uppercase; }
+.go:disabled { opacity: .45; cursor: not-allowed; }
+
+.bills { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+.bill { min-width: 0; background: var(--surface); border: 2px solid var(--ink); border-radius: 2px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.bill.p0 { --c: var(--a); }
+.bill.p1 { --c: var(--b); }
+.bill h3 { margin: 0; font-family: var(--mono); font-weight: 500; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--c); overflow-wrap: anywhere; }
+.bill ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.bill li { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; border-top: 1.5px solid var(--line); padding-top: 6px; font-weight: 500; font-size: 14px; }
+.bill li:first-child { border-top: 0; padding-top: 0; font-family: var(--display); font-weight: 400; font-size: 24px; line-height: 1.05; text-transform: uppercase; }
+.bill li .it { min-width: 0; overflow-wrap: anywhere; }
+.bill li .it small { display: block; font-family: var(--body); font-size: 12px; font-weight: 400; text-transform: none; color: var(--muted); }
+.bill li .pr { font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bill li.empty { color: var(--muted); opacity: .5; font-family: var(--body); font-size: 14px; font-weight: 400; text-transform: none; }
+
+.log { display: flex; flex-direction: column; gap: 8px; }
+.log ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.log li { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1.5px solid var(--line); }
+.log .n { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.log .t { min-width: 0; overflow-wrap: anywhere; }
+.log .t small { display: block; color: var(--muted); font-size: 12px; }
+.log li.skipped .t b { font-weight: 400; color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.log .t b { font-weight: 500; }
+.log .pr { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 500; }
+.log .x { background: transparent; border: 1.5px solid var(--line); border-radius: 2px; padding: 4px 8px; font-size: 12px; color: var(--muted); }
+.log .x:hover { border-color: var(--danger); color: var(--danger); }
+.none { color: var(--muted); font-size: 14px; padding-top: 8px; border-top: 1.5px solid var(--line); }
+.reset { align-self: flex-start; background: transparent; border: 1.5px solid var(--line); border-radius: 2px; padding: 8px 12px; font-size: 13px; color: var(--muted); }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.confirm button { border-radius: 2px; padding: 8px 14px; border: 2px solid var(--ink); background: transparent; }
+.confirm .yes { background: var(--danger); border-color: var(--danger); color: var(--bg); }
+.note { font-size: 12px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .wbtn, .step, .chip { transition: border-color .12s, background-color .12s, color .12s; } }
+</style>
+
+<main>
+  <header>
+    <div class="kicker" id="kicker">Rock · Festival · 5 slots · 35 each</div>
+    <h1>Auction<br><span id="h1b">Lineup</span></h1>
+  </header>
+  <div class="tabs" role="tablist" id="tabs" aria-label="Category"></div>
+  <div class="subnav" id="subnav">
+    <div class="chips" id="genres" role="group" aria-label="Genre"></div>
+    <div class="seg" id="fmts" role="group" aria-label="Format"></div>
+  </div>
+  <div id="panels"></div>
+</main>
+
+<script>
+(function () {
+  var BUDGET = 35, SLOTS = 5, MAX_SKIPS = 3;
+
+  /* ---------- Pools ---------- */
+  var LINEUP_POOL = [
+    'Queen','Led Zeppelin','Pink Floyd','The Rolling Stones','Nirvana','AC/DC','David Bowie','Bruce Springsteen',
+    'Radiohead','Red Hot Chili Peppers','Iggy Pop','Patti Smith','The Beatles','The Who','The Clash','Ramones',
+    'Metallica',"Guns N' Roses",'U2','Foo Fighters','Arctic Monkeys','The Strokes','Muse','Oasis','Blur','The Cure',
+    'Iron Maiden','Black Sabbath','Deep Purple','Jimi Hendrix','Lou Reed','Neil Young','Fleetwood Mac','Pearl Jam',
+    'Green Day','Blondie','Joy Division','Queens of the Stone Age','The White Stripes','Tame Impala','Rage Against the Machine',
+    'Téléphone','Noir Désir','Indochine','Kings of Leon','Interpol','Bob Dylan',
+    'Sparks','The Fall','Pixies','Sonic Youth','Can','Siouxsie and the Banshees','My Bloody Valentine','Fontaines D.C.','Alain Bashung'
+  ];
+  var PLAYLIST_POOL = [
+    'Bohemian Rhapsody | Queen','Heroes | David Bowie','Smells Like Teen Spirit | Nirvana','Whole Lotta Love | Led Zeppelin',
+    'Comfortably Numb | Pink Floyd','Paint It Black | The Rolling Stones','Back in Black | AC/DC','Born to Run | Bruce Springsteen',
+    'Paranoid Android | Radiohead','Under the Bridge | Red Hot Chili Peppers','The Passenger | Iggy Pop','Because the Night | Patti Smith',
+    "Boys Don't Cry | The Cure",'Seven Nation Army | The White Stripes','Do I Wanna Know? | Arctic Monkeys','Last Nite | The Strokes',
+    'Wonderwall | Oasis','Song 2 | Blur',"Sweet Child o' Mine | Guns N' Roses",'Where the Streets Have No Name | U2','Everlong | Foo Fighters',
+    'Purple Haze | Jimi Hendrix','Perfect Day | Lou Reed',"Rockin' in the Free World | Neil Young",'Go Your Own Way | Fleetwood Mac',
+    'Alive | Pearl Jam','Basket Case | Green Day','Heart of Glass | Blondie','Love Will Tear Us Apart | Joy Division',
+    'No One Knows | Queens of the Stone Age','Killing in the Name | Rage Against the Machine','Le vent nous portera | Noir Désir',
+    "L'Aventurier | Indochine","Ça (c'est vraiment toi) | Téléphone",'Gaby oh Gaby | Alain Bashung','Sultans of Swing | Dire Straits',
+    'Should I Stay or Should I Go | The Clash','Blitzkrieg Bop | Ramones','Enter Sandman | Metallica','Iron Man | Black Sabbath',
+    'Smoke on the Water | Deep Purple','Black Hole Sun | Soundgarden','Mr. Brightside | The Killers','Like a Rolling Stone | Bob Dylan',
+    'Marquee Moon | Television','Where Is My Mind? | Pixies','Teen Age Riot | Sonic Youth','Hong Kong Garden | Siouxsie and the Banshees',
+    'Only Shallow | My Bloody Valentine','Cut Your Hair | Pavement',"This Town Ain't Big Enough for Both of Us | Sparks",
+    'Boys in the Better Land | Fontaines D.C.'
+  ];
+
+  var RAPUS_LINEUP = [
+    'Kendrick Lamar','Jay-Z','Nas','Eminem','2Pac','The Notorious B.I.G.','Snoop Dogg','Dr. Dre','Kanye West','Drake','J. Cole',
+    'Travis Scott','Tyler, the Creator','A$AP Rocky','OutKast','Wu-Tang Clan','Public Enemy','Run-DMC','Beastie Boys',
+    'A Tribe Called Quest','De La Soul','N.W.A','Ice Cube','Lil Wayne','50 Cent','Missy Elliott','Lauryn Hill','Cardi B',
+    'Nicki Minaj','Megan Thee Stallion','Future','Migos','21 Savage','Playboi Carti','Mac Miller','Pusha T','Rakim',
+    'Mobb Deep','Method Man','Busta Rhymes','Lil Kim','Ludacris','T.I.','Lupe Fiasco','Mos Def','Common',
+    'MF DOOM','Danny Brown','Freddie Gibbs','Earl Sweatshirt','Run the Jewels','Black Star','Jay Electronica'
+  ];
+  var RAPUS_PLAYLIST = [
+    'Alright | Kendrick Lamar','HUMBLE. | Kendrick Lamar','Backseat Freestyle | Kendrick Lamar','N.Y. State of Mind | Nas','Juicy | The Notorious B.I.G.',
+    'California Love | 2Pac','Dear Mama | 2Pac','Lose Yourself | Eminem','Gin and Juice | Snoop Dogg','Still D.R.E. | Dr. Dre',
+    'Gold Digger | Kanye West','Power | Kanye West','Runaway | Kanye West','Hotline Bling | Drake',"God's Plan | Drake",'SICKO MODE | Travis Scott',
+    'Ms. Jackson | OutKast','Rosa Parks | OutKast','C.R.E.A.M. | Wu-Tang Clan','Fight the Power | Public Enemy','Walk This Way | Run-DMC',
+    'Can I Kick It? | A Tribe Called Quest','Electric Relaxation | A Tribe Called Quest','Me, Myself and I | De La Soul','Straight Outta Compton | N.W.A',
+    'Today Was a Good Day | Ice Cube','In Da Club | 50 Cent','Get Ur Freak On | Missy Elliott','Doo-Wop (That Thing) | Lauryn Hill',
+    'WAP | Cardi B','Super Bass | Nicki Minaj','Mask Off | Future','Bad and Boujee | Migos','Self Care | Mac Miller',
+    'Empire State of Mind | Jay-Z','99 Problems | Jay-Z','Hard Knock Life | Jay-Z','The Message | Grandmaster Flash and the Furious Five',
+    "Rapper's Delight | The Sugarhill Gang",'Shook Ones, Pt. II | Mobb Deep','Sabotage | Beastie Boys','Mr. Wendal | Arrested Development',
+    'Accordion | Madvillain','Kick, Push | Lupe Fiasco'
+  ];
+  var RAPUK_LINEUP = [
+    'Stormzy','Dave','Skepta','Giggs','J Hus','Little Simz','Kano','Wiley','Dizzee Rascal','Ghetts','Aitch','Central Cee','Headie One',
+    'slowthai','Loyle Carner','AJ Tracey','Digga D','Tinie Tempah','The Streets','Roots Manuva','M.I.A.','Lethal Bizzle',    'Bugzy Malone','Professor Green','Plan B','Example','Tinchy Stryder','Ms Dynamite','Stefflon Don',
+    'Big Shaq',
+      ];
+  var RAPUK_PLAYLIST = [
+    'Shut Up | Stormzy','Vossi Bop | Stormzy','Big for Your Boots | Stormzy','Funky Friday | Dave','Black | Dave','Sprinter | Dave',
+    'Shutdown | Skepta',"That's Not Me | Skepta",'Bonkers | Dizzee Rascal','I Luv U | Dizzee Rascal','Fix Up, Look Sharp | Dizzee Rascal',
+    'Did You See | J Hus','Common Sense | J Hus','Introvert | Little Simz','Venom | Little Simz','Doja | Central Cee','Eskimo | Wiley',
+    'Fit but You Know It | The Streets','Dry Your Eyes | The Streets',
+    'Paper Planes | M.I.A.','Pass Out | Tinie Tempah','Ladbroke Grove | AJ Tracey','Thiago Silva | Dave',
+    'Nothing Great About Britain | slowthai',"Ain't It Different | Headie One",
+    "Ain't Nothing Changed | Loyle Carner","Man's Not Hot | Big Shaq",'Pow! (Forward) | Lethal Bizzle',
+    "Talkin' da Hardest | Giggs",'Dy-na-mi-tee | Ms Dynamite'
+  ];
+  var RAPFR_LINEUP = [
+    'IAM','Suprême NTM','MC Solaar','Booba','Kaaris','Orelsan','Nekfeu','PNL','Jul','SCH','Ninho','Niska','Damso','Lomepal','Hamza',
+    'Freeze Corleone','Laylow','Sofiane','Rohff','Kery James','Oxmo Puccino','Disiz','Médine','Lacrim','Soprano','La Fouine',
+    "Sexion d'Assaut",'Dosseh','Alonzo','Tiakola','Gazo','Werenoi','Bigflo & Oli','Vald','Roméo Elvis','Josman','1995','Lunatic',
+    'Fonky Family','Ärsenik','Sniper','113','Doc Gynéco',"Diam's",'Keny Arkana','Youssoupha','Dinos','Gims','Dadju','Koba LaD','Hatik','Naps',
+    'Alpha Wann','Zamdane','Népal','Casey'
+  ];
+  var RAPFR_PLAYLIST = [
+    'Bouge de là | MC Solaar','Nouveau western | MC Solaar','Je danse le mia | IAM',"Demain c'est loin | IAM",'Petit frère | IAM',
+    'Seine-Saint-Denis Style | Suprême NTM','Ma Benz | Suprême NTM','92i Veyron | Booba','DKR | Booba','Le monde ou rien | PNL',
+    'Au DD | PNL','Dans la légende | PNL','Basique | Orelsan','La terre est ronde | Orelsan','On verra | Nekfeu','Mwaka Moon | Kalash',
+    'Macarena | Damso','Trop beau | Lomepal',"Goutte d'eau | Ninho",'Réseaux | Niska',"Désolé | Sexion d'Assaut",'Art de rue | Fonky Family',
+    'La France | Sniper','Tonton du bled | 113','Boxe avec les mots | Ärsenik','Banlieusards | Kery James','Né ici | Doc Gynéco',
+    'Le crime paie | Lunatic','Wesh alors | Jul',"La boulette | Diam's",'Entourage | Youssoupha','Mon précieux | Soprano',"Don't Panik | Médine"
+  ];
+
+  var ART_POOL = [
+    'Gerhard Richter | Contemporary · Germany','Jeff Koons | Contemporary · USA','Damien Hirst | Contemporary · UK','Yayoi Kusama | Contemporary · Japan',
+    'Takashi Murakami | Contemporary · Japan','Cindy Sherman | Contemporary · USA','Kara Walker | Contemporary · USA',
+    'Kerry James Marshall | Contemporary · USA','Marlene Dumas | Contemporary · Netherlands','Peter Doig | Contemporary · UK',
+    'Wolfgang Tillmans | Contemporary · Germany','Anish Kapoor | Contemporary · UK','Olafur Eliasson | Contemporary · Denmark',
+    'Ai Weiwei | Contemporary · China','Cecily Brown | Contemporary · UK / USA','Mark Bradford | Contemporary · USA',
+    'Amoako Boafo | Contemporary · Ghana','Njideka Akunyili Crosby | Contemporary · Nigeria / USA','Tschabalala Self | Contemporary · USA',
+    'Maurizio Cattelan | Contemporary · Italy','Christian Boltanski | Contemporary · France','Annette Messager | Contemporary · France',
+    'Sophie Calle | Contemporary · France','Daniel Buren | Contemporary · France','JR | Contemporary · France','Claire Tabouret | Contemporary · France',
+    'Pol Taburet | Contemporary · France','Françoise Pétrovitch | Contemporary · France','Pierre Huyghe | Contemporary · France',
+    'Philippe Parreno | Contemporary · France','Julie Mehretu | Contemporary · Ethiopia / USA','Rashid Johnson | Contemporary · USA',
+    'Lynette Yiadom-Boakye | Contemporary · UK','Nicole Eisenman | Contemporary · USA','Wangechi Mutu | Contemporary · Kenya / USA',
+    'Tomás Saraceno | Contemporary · Argentina','Katharina Grosse | Contemporary · Germany','Rirkrit Tiravanija | Contemporary · Thailand',
+    'Tracey Emin | Contemporary · UK','Banksy | Contemporary · UK','KAWS | Contemporary · USA','Kehinde Wiley | Contemporary · USA',
+    'Adrian Ghenie | Contemporary · Romania','Neo Rauch | Contemporary · Germany','Luc Tuymans | Contemporary · Belgium',
+    'Georg Baselitz | Contemporary · Germany','Anselm Kiefer | Contemporary · Germany','Elizabeth Peyton | Contemporary · USA',
+    'Hito Steyerl | Contemporary · Germany','Danh Vō | Contemporary · Vietnam / Denmark','Issy Wood | Contemporary · UK / USA',
+    'Oscar Murillo | Contemporary · Colombia','Avery Singer | Contemporary · USA','Michaël Borremans | Contemporary · Belgium',
+    'Louis Fratino | Contemporary · USA','Jean-Michel Basquiat | Neo-Expressionism · USA',
+    'Rembrandt | Dutch Golden Age','Johannes Vermeer | Dutch Golden Age','Caravaggio | Baroque','Francisco Goya | Romanticism',
+    'Diego Velázquez | Baroque','Eugène Delacroix | Romanticism','J. M. W. Turner | Romanticism','Leonardo da Vinci | Renaissance',
+    'Claude Monet | Impressionism','Pierre-Auguste Renoir | Impressionism','Edgar Degas | Impressionism','Camille Pissarro | Impressionism',
+    'Berthe Morisot | Impressionism','Alfred Sisley | Impressionism','Gustave Caillebotte | Impressionism','Édouard Manet | Impressionism',
+    'Paul Cézanne | Post-Impressionism','Georges Seurat | Neo-Impressionism','Paul Gauguin | Post-Impressionism','Vincent van Gogh | Post-Impressionism',
+    'Henri de Toulouse-Lautrec | Post-Impressionism','Pierre Bonnard | Nabis','Édouard Vuillard | Nabis','Maurice Denis | Nabis',
+    'Félix Vallotton | Nabis','Paul Sérusier | Nabis','Henri Matisse | Fauvism','André Derain | Fauvism','Pablo Picasso | Cubism',
+    'Georges Braque | Cubism','Fernand Léger | Cubism','Juan Gris | Cubism','Robert Delaunay | Orphism','Marcel Duchamp | Dada',
+    'Amedeo Modigliani | School of Paris','Chaïm Soutine | School of Paris','Jean Dubuffet | Art brut','Nicolas de Staël | Post-war · France',
+    'Pierre Soulages | Post-war · France','Francis Bacon | Post-war · UK','Lucian Freud | Post-war · UK','Alberto Giacometti | Post-war · Switzerland',
+    'Yves Klein | Nouveau réalisme','Joan Miró | Surrealism','Salvador Dalí | Surrealism','Louise Bourgeois | Post-war · France / USA'
+  ];
+
+  var FIVE_POOL = [
+    'Lionel Messi | Argentina','Cristiano Ronaldo | Portugal','Kylian Mbappé | France','Erling Haaland | Norway','Zinedine Zidane | France',
+    'Ronaldinho | Brazil','Diego Maradona | Argentina','Pelé | Brazil','Johan Cruyff | Netherlands','Thierry Henry | France',
+    'Neymar Jr | Brazil','Luka Modrić | Croatia','Andrés Iniesta | Spain','Xavi | Spain','Andrea Pirlo | Italy','Gianluigi Buffon | Italy',
+    'Manuel Neuer | Germany',"N'Golo Kanté | France",'Antoine Griezmann | France','Vinícius Júnior | Brazil','Jude Bellingham | England',
+    'Mohamed Salah | Egypt','Kevin De Bruyne | Belgium','Robert Lewandowski | Poland','Karim Benzema | France','Zlatan Ibrahimović | Sweden',
+    'David Beckham | England','Francesco Totti | Italy','Alessandro Del Piero | Italy','Roberto Baggio | Italy','Éric Cantona | France',
+    'Michel Platini | France','Marco van Basten | Netherlands','Ruud Gullit | Netherlands','Wayne Rooney | England','Didier Drogba | Ivory Coast',
+    "Samuel Eto'o | Cameroon",'Patrick Vieira | France','Claude Makélélé | France','Robert Pires | France','Franck Ribéry | France',
+    'Kaká | Brazil','Rivaldo | Brazil','Romário | Brazil','Cafu | Brazil','Paolo Maldini | Italy','Roberto Carlos | Brazil',
+    'Lamine Yamal | Spain','Eden Hazard | Belgium','Paul Pogba | France','Sergio Ramos | Spain','Virgil van Dijk | Netherlands',
+    'Gareth Bale | Wales','Luis Suárez | Uruguay','Sadio Mané | Senegal','Son Heung-min | South Korea',
+    'Juan Román Riquelme | Argentina','Gheorghe Hagi | Romania','Carlos Valderrama | Colombia','Jay-Jay Okocha | Nigeria',
+    'Matt Le Tissier | England','Youri Djorkaeff | France','Hatem Ben Arfa | France','Michael Laudrup | Denmark',
+    'Gianfranco Zola | Italy','René Higuita | Colombia'
+  ];
+
+  /* ---------- Helpers ---------- */
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function norm(s) { return String(s).trim().toLowerCase(); }
+  function uniq(a) { return a.filter(function (v, i) { return a.indexOf(v) === i; }); }
+  function shuffle(a) {
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function parts(item) {
+    var k = item.indexOf(' | ');
+    return k === -1 ? { main: item, sub: '' } : { main: item.slice(0, k), sub: item.slice(k + 3) };
+  }
+
+  var NAMES = ['Me', 'Her'];
+  try {
+    var rn = localStorage.getItem('enchere-names-v3');
+    if (rn) { var pn = JSON.parse(rn); if (Array.isArray(pn) && pn.length === 2) NAMES = pn; }
+    else {
+      var r2 = localStorage.getItem('lineup-encheres-v2');
+      if (r2) { var p2 = JSON.parse(r2); if (p2 && Array.isArray(p2.names) && p2.names.length === 2) NAMES = p2.names; }
+    }
+  } catch (e) {}
+  if (NAMES[0] === 'Moi' && NAMES[1] === 'Copine') NAMES = ['Me', 'Her'];
+  function saveNames() { try { localStorage.setItem('enchere-names-v3', JSON.stringify(NAMES)); } catch (e) {} }
+  function nm(i) { return (NAMES[i] || '').trim() || (i === 0 ? 'Player 1' : 'Player 2'); }
+
+  /* ---------- Game configs ---------- */
+  var GENRES = [
+    { id: 'rock',  label: 'Rock',   lineup: LINEUP_POOL,    playlist: PLAYLIST_POOL,   lk: 'enchere-lineup-v3',        pk: 'enchere-playlist-v3',        lo: 'lineup-encheres-v2' },
+    { id: 'rapus', label: 'Rap US', lineup: RAPUS_LINEUP,   playlist: RAPUS_PLAYLIST,  lk: 'enchere-rapus-lineup-v4',  pk: 'enchere-rapus-playlist-v4' },
+    { id: 'rapuk', label: 'Rap UK', lineup: RAPUK_LINEUP,   playlist: RAPUK_PLAYLIST,  lk: 'enchere-rapuk-lineup-v4',  pk: 'enchere-rapuk-playlist-v4' },
+    { id: 'rapfr', label: 'Rap FR', lineup: RAPFR_LINEUP,   playlist: RAPFR_PLAYLIST,  lk: 'enchere-rapfr-lineup-v4',  pk: 'enchere-rapfr-playlist-v4' }
+  ];
+  function tagL(a, t) { return a.map(function (x) { return x + ' | ' + t; }); }
+  function tagP(a, t) { return a.map(function (x) { return x + ' · ' + t; }); }
+  GENRES = [GENRES[0], {
+    id: 'rap', label: 'Rap',
+    lineup: tagL(RAPUS_LINEUP, 'US').concat(tagL(RAPUK_LINEUP, 'UK'), tagL(RAPFR_LINEUP, 'FR')),
+    playlist: tagP(RAPUS_PLAYLIST, 'US').concat(tagP(RAPUK_PLAYLIST, 'UK'), tagP(RAPFR_PLAYLIST, 'FR')),
+    lk: 'enchere-rap-lineup-v5', pk: 'enchere-rap-playlist-v5'
+  }];
+  var FMTS = [{ id: 'lineup', label: 'Lineup' }, { id: 'playlist', label: 'Playlist' }];
+  var TOPS = [{ id: 'music', label: 'Music' }, { id: 'art', label: 'Art' }, { id: 'five', label: 'Five' }];
+
+  var CONFIGS = [];
+  GENRES.forEach(function (g) {
+    CONFIGS.push({
+      id: g.id + '-lineup', h1b: 'Lineup', kicker: g.label + ' · Festival · 5 slots · 35 each',
+      key: g.lk, oldKey: g.lo || null, pool: g.lineup,
+      stage: 'Now on stage', unit: 'slots', done: 'Curtain', allFull: 'Lineups complete',
+      note: 'Minimum bid is 1. Max keeps 1 in budget for each slot still to fill. Each player can skip 3 times. A skipped artist does not come back.'
+    });
+    CONFIGS.push({
+      id: g.id + '-playlist', h1b: 'Playlist', kicker: g.label + ' · Playlist · 5 tracks · 35 each',
+      key: g.pk, oldKey: null, pool: g.playlist,
+      stage: 'Now playing', unit: 'tracks', done: 'End of set', allFull: 'Playlists complete',
+      note: 'Minimum bid is 1. Max keeps 1 in budget for each track still to pick. Each player can skip 3 times. A skipped track does not come back.'
+    });
+  });
+  CONFIGS.push({
+    id: 'art', h1b: 'Art', kicker: 'Art · 5 artists · 35 each',
+    key: 'enchere-art-v4', oldKey: null, pool: ART_POOL,
+    stage: 'Now showing', unit: 'artists', done: 'Closing night', allFull: 'Collections complete',
+    note: 'Minimum bid is 1. Max keeps 1 in budget for each artist still to acquire. Each player can skip 3 times. A skipped artist does not come back.'
+  });
+  CONFIGS.push({
+    id: 'five', h1b: 'Five-a-side', kicker: 'Football · 5 players · 35 each',
+    key: 'enchere-five-v3', oldKey: null, pool: FIVE_POOL,
+    stage: 'Next up', unit: 'players', done: 'Full time', allFull: 'Teams complete',
+    note: 'Minimum bid is 1. Max keeps 1 in budget for each spot still to fill. Each of you can skip 3 times. A skipped footballer does not come back.'
+  });
+
+  /* ---------- One game ---------- */
+  function makeGame(cfg) {
+    var pool = uniq(cfg.pool), p = cfg.id + '-';
+    var state = null;
+    [cfg.key, cfg.oldKey].forEach(function (k) {
+      if (state || !k) return;
+      try {
+        var raw = localStorage.getItem(k);
+        if (raw) {
+          var s = JSON.parse(raw);
+          if (s && Array.isArray(s.sales) && Array.isArray(s.order) && s.order.length) state = { sales: s.sales, order: s.order };
+        }
+      } catch (e) {}
+    });
+    if (!state) state = { sales: [], order: shuffle(pool) };
+    (function addMissing() {
+      var used = state.sales.map(function (s) { return norm(s.artist); });
+      var first = state.order.length;
+      for (var k = 0; k < state.order.length; k++) if (used.indexOf(norm(state.order[k])) === -1) { first = k; break; }
+      var have = state.order.map(norm);
+      pool.forEach(function (it) {
+        if (have.indexOf(norm(it)) !== -1) return;
+        var pos = first + Math.floor(Math.random() * (state.order.length - first + 1));
+        state.order.splice(pos, 0, it);
+      });
+    })();
+    var sel = null, confirming = false;
+
+    var root = document.createElement('section');
+    root.className = 'panel'; root.id = p + 'panel'; root.hidden = true;
+    root.innerHTML =
+      '<section aria-label="Budgets"><div class="players">' +
+      [0, 1].map(function (i) {
+        return '<div class="pcard p' + i + '">' +
+          '<input class="pname" id="' + p + 'name' + i + '" maxlength="14" placeholder="Player ' + (i + 1) + '" aria-label="Rename player ' + (i + 1) + '" autocomplete="off">' +
+          '<div class="rem" id="' + p + 'rem' + i + '">35</div><div class="sub">left</div>' +
+          '<div class="meter" id="' + p + 'meter' + i + '"></div>' +
+          '<div class="facts"><span><b id="' + p + 'cnt' + i + '">0/5</b> ' + cfg.unit + '</span><span>max <b id="' + p + 'max' + i + '">31</b></span></div></div>';
+      }).join('') +
+      '</div><div class="note" style="margin-top:8px">Tap a name to rename it.</div></section>' +
+      '<form class="lot" id="' + p + 'lot" autocomplete="off">' +
+        '<div class="lothead"><div class="lotno" id="' + p + 'lotno">Lot 1</div><div class="opens" id="' + p + 'opens"></div></div>' +
+        '<div><span class="fl">' + esc(cfg.stage) + '</span><div class="stage"><div class="artist" id="' + p + 'artist"></div></div>' +
+        '<div class="skips">' +
+        [0, 1].map(function (i) { return '<button type="button" class="wbtn skipbtn p' + i + '" id="' + p + 's' + i + '"><span class="wn"></span><span class="wm"></span></button>'; }).join('') +
+        '</div></div>' +
+        '<div><span class="fl" id="' + p + 'whol">Sold to</span><div class="who" role="group" aria-labelledby="' + p + 'whol">' +
+        [0, 1].map(function (i) { return '<button type="button" class="wbtn p' + i + '" id="' + p + 'w' + i + '" aria-pressed="false"><span class="wn"></span><span class="wm"></span></button>'; }).join('') +
+        '</div></div>' +
+        '<div><label class="fl" for="' + p + 'bid">Bid</label><div class="bidrow">' +
+        '<button type="button" class="step" id="' + p + 'minus" aria-label="Minus 1">−</button>' +
+        '<input type="number" class="bid" id="' + p + 'bid" inputmode="numeric" min="1" max="35" value="1">' +
+        '<button type="button" class="step" id="' + p + 'plus" aria-label="Plus 1">+</button></div></div>' +
+        '<div class="err" id="' + p + 'err" role="alert"></div>' +
+        '<button type="submit" class="go" id="' + p + 'go">Sold</button>' +
+        '<div class="note">' + esc(cfg.note) + '</div>' +
+      '</form>' +
+      '<section class="bills" id="' + p + 'bills" aria-label="Selections"></section>' +
+      '<section class="log" aria-label="History"><h2>History</h2><div id="' + p + 'logbox"></div><div id="' + p + 'resetbox"></div></section>';
+    $('panels').appendChild(root);
+    function q(id) { return $(p + id); }
+
+    function save() { try { localStorage.setItem(cfg.key, JSON.stringify(state)); } catch (e) {} }
+    function spent(i) { return state.sales.reduce(function (t, s) { return s.who === i ? t + s.bid : t; }, 0); }
+    function count(i) { return state.sales.filter(function (s) { return s.who === i; }).length; }
+    function skipsLeft(i) { return MAX_SKIPS - state.sales.filter(function (s) { return s.who === null && s.by === i; }).length; }
+    function rem(i) { return BUDGET - spent(i); }
+    function maxBid(i) { var c = count(i); return c >= SLOTS ? 0 : Math.max(0, rem(i) - (SLOTS - c - 1)); }
+    function current() {
+      var used = state.sales.map(function (s) { return norm(s.artist); });
+      for (var k = 0; k < state.order.length; k++) if (used.indexOf(norm(state.order[k])) === -1) return state.order[k];
+      return '';
+    }
+
+    function renderPlayers() {
+      for (var i = 0; i < 2; i++) {
+        q('rem' + i).textContent = rem(i);
+        q('cnt' + i).textContent = count(i) + '/' + SLOTS;
+        q('max' + i).textContent = maxBid(i);
+        var m = '';
+        for (var k = 0; k < SLOTS; k++) m += '<i class="' + (k < count(i) ? 'on' : '') + '"></i>';
+        q('meter' + i).innerHTML = m;
+      }
+    }
+    function renderLot() {
+      var art = current();
+      var full = (count(0) >= SLOTS && count(1) >= SLOTS) || !art;
+      var lotNo = state.sales.length + 1;
+      var opener = lotNo % 2 === 1 ? 1 : 0;
+      q('lotno').textContent = full ? 'Finished' : 'Lot ' + lotNo;
+      q('opens').innerHTML = full ? '' : 'Opens: <b>' + esc(nm(opener)) + '</b>';
+      if (full) q('artist').textContent = cfg.done;
+      else { var pt = parts(art); q('artist').innerHTML = esc(pt.main) + (pt.sub ? '<small>' + esc(pt.sub) + '</small>' : ''); }
+      if (sel !== null && count(sel) >= SLOTS) sel = null;
+      for (var i = 0; i < 2; i++) {
+        var b = q('w' + i), isFull = count(i) >= SLOTS;
+        b.querySelector('.wn').textContent = nm(i);
+        b.querySelector('.wm').textContent = isFull ? 'full' : 'max ' + maxBid(i);
+        b.disabled = isFull || full;
+        b.setAttribute('aria-pressed', sel === i ? 'true' : 'false');
+        var s = q('s' + i), left = skipsLeft(i);
+        s.querySelector('.wn').textContent = 'Skip · ' + nm(i);
+        s.querySelector('.wm').textContent = left + ' left';
+        s.disabled = full || left <= 0;
+      }
+      q('go').disabled = full;
+      q('go').textContent = full ? cfg.allFull : 'Sold';
+      q('bid').disabled = full; q('minus').disabled = full; q('plus').disabled = full;
+    }
+    function renderBills() {
+      var out = '';
+      for (var i = 0; i < 2; i++) {
+        var mine = state.sales.filter(function (s) { return s.who === i; }).sort(function (a, b) { return b.bid - a.bid; });
+        var li = '';
+        for (var k = 0; k < SLOTS; k++) {
+          var s = mine[k];
+          if (s) {
+            var pt = parts(s.artist);
+            li += '<li><span class="it">' + esc(pt.main) + (pt.sub ? '<small>' + esc(pt.sub) + '</small>' : '') + '</span><span class="pr">' + s.bid + '</span></li>';
+          } else li += '<li class="empty"><span>—</span></li>';
+        }
+        out += '<div class="bill p' + i + '"><h3>' + esc(nm(i)) + '</h3><ol>' + li + '</ol></div>';
+      }
+      q('bills').innerHTML = out;
+    }
+    function renderLog() {
+      if (!state.sales.length) q('logbox').innerHTML = '<div class="none">No lots yet.</div>';
+      else {
+        var rows = '';
+        for (var k = state.sales.length - 1; k >= 0; k--) {
+          var s = state.sales[k], skipped = s.who === null, pt = parts(s.artist);
+          var who = skipped ? (s.by === 0 || s.by === 1 ? 'skipped by ' + esc(nm(s.by)) : 'skipped') : esc(nm(s.who));
+          rows += '<li class="' + (skipped ? 'skipped' : '') + '"><span class="n">#' + (k + 1) + '</span><span class="t"><b>' + esc(pt.main) + '</b>' +
+            '<small>' + (pt.sub ? esc(pt.sub) + ' · ' : '') + who + '</small></span>' +
+            '<span class="pr">' + (skipped ? '—' : s.bid) + '</span><button type="button" class="x" data-del="' + k + '" aria-label="Undo lot ' + (k + 1) + '">Undo</button></li>';
+        }
+        q('logbox').innerHTML = '<ul>' + rows + '</ul>';
+      }
+      q('resetbox').innerHTML = confirming
+        ? '<div class="confirm">Clear everything? <button type="button" class="yes" id="' + p + 'yes">Yes, clear</button><button type="button" id="' + p + 'no">No</button></div>'
+        : (state.sales.length ? '<button type="button" class="reset" id="' + p + 'reset">New game</button>' : '');
+    }
+    function renderAll() { renderPlayers(); renderLot(); renderBills(); renderLog(); }
+    function clampBid() {
+      var v = parseInt(q('bid').value, 10);
+      if (isNaN(v) || v < 1) v = 1;
+      var cap = sel !== null ? Math.max(1, maxBid(sel)) : BUDGET;
+      if (v > cap) v = cap;
+      q('bid').value = v;
+    }
+
+    q('name0').value = NAMES[0]; q('name1').value = NAMES[1];
+    [0, 1].forEach(function (i) {
+      q('name' + i).addEventListener('input', function () {
+        NAMES[i] = this.value; saveNames();
+        GAMES.forEach(function (g) { g.onNames(i, q('name' + i)); });
+      });
+      q('w' + i).addEventListener('click', function () { sel = i; q('err').textContent = ''; renderLot(); clampBid(); });
+      q('s' + i).addEventListener('click', function () {
+        var art = current(); if (!art || skipsLeft(i) <= 0) return;
+        state.sales.push({ artist: art, who: null, bid: 0, by: i });
+        save(); sel = null; q('bid').value = 1; q('err').textContent = '';
+        renderAll();
+      });
+    });
+    q('minus').addEventListener('click', function () { q('bid').value = (parseInt(q('bid').value, 10) || 1) - 1; clampBid(); });
+    q('plus').addEventListener('click', function () { q('bid').value = (parseInt(q('bid').value, 10) || 0) + 1; clampBid(); });
+    q('bid').addEventListener('change', clampBid);
+
+    q('lot').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var art = current(), bid = parseInt(q('bid').value, 10), err = '';
+      if (!art) err = 'Nothing left to bid on.';
+      else if (sel === null) err = 'Pick who wins the lot.';
+      else if (isNaN(bid) || bid < 1) err = 'Minimum bid is 1.';
+      else if (bid > maxBid(sel)) err = nm(sel) + " can't go above " + maxBid(sel) + ' on this lot.';
+      q('err').textContent = err;
+      if (err) return;
+      state.sales.push({ artist: art, who: sel, bid: bid });
+      save(); sel = null; q('bid').value = 1;
+      renderAll();
+    });
+    root.addEventListener('click', function (e) {
+      var d = e.target.closest('[data-del]');
+      if (d) { state.sales.splice(parseInt(d.getAttribute('data-del'), 10), 1); save(); sel = null; renderAll(); return; }
+      if (e.target.id === p + 'reset') { confirming = true; renderLog(); }
+      else if (e.target.id === p + 'no') { confirming = false; renderLog(); }
+      else if (e.target.id === p + 'yes') {
+        state.sales = []; state.order = shuffle(pool); confirming = false; sel = null; q('bid').value = 1; save(); renderAll();
+      }
+    });
+
+    renderAll();
+    return {
+      cfg: cfg, root: root,
+      onNames: function (i, src) {
+        var el = q('name' + i);
+        if (el !== src) el.value = NAMES[i];
+        renderLot(); renderBills(); renderLog();
+      }
+    };
+  }
+
+  var GAMES = CONFIGS.map(makeGame);
+
+  /* ---------- Navigation ---------- */
+  var NAVKEY = 'enchere-nav-v4';
+  var nav = { top: 'music', genre: 'rock', fmt: 'lineup' };
+  try {
+    var rv = localStorage.getItem(NAVKEY);
+    if (rv) {
+      var nv = JSON.parse(rv);
+      if (nv && TOPS.some(function (t) { return t.id === nv.top; })) nav.top = nv.top;
+      if (nv && GENRES.some(function (g) { return g.id === nv.genre; })) nav.genre = nv.genre;
+      if (nv && FMTS.some(function (f) { return f.id === nv.fmt; })) nav.fmt = nv.fmt;
+    }
+  } catch (e) {}
+
+  $('tabs').innerHTML = TOPS.map(function (t) {
+    return '<button type="button" class="tab" role="tab" id="tab-' + t.id + '" data-top="' + t.id + '">' + esc(t.label) + '</button>';
+  }).join('');
+  $('genres').innerHTML = GENRES.map(function (g) {
+    return '<button type="button" class="chip" data-genre="' + g.id + '" aria-pressed="false">' + esc(g.label) + '</button>';
+  }).join('');
+  $('fmts').innerHTML = FMTS.map(function (f) {
+    return '<button type="button" data-fmt="' + f.id + '" aria-pressed="false">' + esc(f.label) + '</button>';
+  }).join('');
+
+  function activeId() { return nav.top === 'music' ? nav.genre + '-' + nav.fmt : nav.top; }
+  function show() {
+    var id = activeId();
+    GAMES.forEach(function (g) {
+      var on = g.cfg.id === id;
+      g.root.hidden = !on;
+      if (on) { $('h1b').textContent = g.cfg.h1b; $('kicker').textContent = g.cfg.kicker; }
+    });
+    TOPS.forEach(function (t) { $('tab-' + t.id).setAttribute('aria-selected', t.id === nav.top ? 'true' : 'false'); });
+    $('subnav').hidden = nav.top !== 'music';
+    document.querySelectorAll('[data-genre]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-genre') === nav.genre ? 'true' : 'false'); });
+    document.querySelectorAll('[data-fmt]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-fmt') === nav.fmt ? 'true' : 'false'); });
+    try { localStorage.setItem(NAVKEY, JSON.stringify(nav)); } catch (e) {}
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-top]'), g = e.target.closest('[data-genre]'), f = e.target.closest('[data-fmt]');
+    if (t) nav.top = t.getAttribute('data-top');
+    else if (g) nav.genre = g.getAttribute('data-genre');
+    else if (f) nav.fmt = f.getAttribute('data-fmt');
+    else return;
+    show();
+  });
+  show();
+})();
+</script>
+
+</body></html>
